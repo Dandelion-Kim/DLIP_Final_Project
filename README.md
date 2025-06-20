@@ -4,7 +4,7 @@
 <hr>
 
 ## Deep Learning and Image Process by Young-Keun Kim, Handong Global University
-Author: Chan-Jung Kim
+Author: Chan-Jung Kim and Jong-Hyeon Kim
 
 Date: Created 2025-06-20
       Updated 2025-06-20
