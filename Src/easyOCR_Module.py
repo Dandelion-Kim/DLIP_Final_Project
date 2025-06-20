@@ -1,3 +1,12 @@
+###############################################################################
+# @course 	Deep Learning and Image Processing - HGU
+# @author	ChanJung Kim / 22000188
+#           JongHyeon Kim / 21900179
+# @Created	2025-06-13 by CJKIM
+# @Modified	2025-06-21 by JHKIM
+# @brief	[DLIP] Final Project Module which contains easyOCR related function
+###############################################################################
+
 import cv2 
 import numpy as np
 from Levenshtein import ratio
