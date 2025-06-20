@@ -1,3 +1,12 @@
+###############################################################################
+# @course 	Deep Learning and Image Processing - HGU
+# @author	ChanJung Kim / 22000188
+#           JongHyeon Kim / 21900179
+# @Created	2025-06-7 by CJKIM
+# @Modified	2025-06-21 by CJKIM
+# @brief	[DLIP] Final Project: Camera-Based System for Automatic Recognition
+#           and Node Pin Mapping
+###############################################################################
 import cv2 
 # Insert appropriate module you downloaded
 import ModuleYouDownloaded as OCRModule
