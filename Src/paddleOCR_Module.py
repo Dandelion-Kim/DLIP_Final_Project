@@ -13,10 +13,14 @@ from Levenshtein import ratio
 from paddleocr import PaddleOCR
 import os
 
+# These parameters you may change if no letters are detected from ROI at Debug Mode
+beta = 40                           # used in convertScaleAbs in lines 180
+LaplacianConstant = 6               # used in laplacian kernel in lines 27
+
 # Kernel Declaration
 kernelMorph2x2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2,2))
 kernelMorph3x3 = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
-kernel = np.array([[0, -1, 0], [-1, 6, -1], [0, -1, 0]])
+kernel = np.array([[0, -1, 0], [-1, LaplacianConstant, -1], [0, -1, 0]])
 
 # Paddle OCR Configuration
 ocr = PaddleOCR(
@@ -109,7 +113,7 @@ def IdentifyICchip(frame: cv2.typing.MatLike,
                 chipList: list, 
                 contours: cv2.typing.MatLike,
                 flag: list):
-    # Variable to Return Initiation
+    # Return Variable Initiation
     point = []
     length = []
     whRatio = []
@@ -118,6 +122,7 @@ def IdentifyICchip(frame: cv2.typing.MatLike,
     boxData = []
     idx = 0
     flagCount = 0
+
     for cnt in contours:
         area = cv2.contourArea(cnt)
         if area > 1000:  # Exception for Too small contour
@@ -126,20 +131,23 @@ def IdentifyICchip(frame: cv2.typing.MatLike,
             ############################### Needed Information Diriven #############################
             ########################################################################################
             x, y, w, h = cv2.boundingRect(cnt)
+            # Identify if Chip lays as horizontal or vetical
             if w > h:
                 Horizontal = True
             else:
                 Horizontal = False
+            # ROI Selection
             roi = frame[y:y+h, x:x+w]
 
+            # Finding rectangle points and angle with minimum area
             rect = cv2.minAreaRect(cnt)
             box = cv2.boxPoints(rect)
             box = np.intp(box)
-
-            (yc, xc), (wc, hc), angle = rect
+            _, (wc, hc), angle = rect
             angleROI = angle
             angleGUI = angle
 
+            # Calculate ratio of width and height 
             rate = wc/hc
             if wc < hc:
                 rate = hc/wc
@@ -151,6 +159,7 @@ def IdentifyICchip(frame: cv2.typing.MatLike,
             if rate > 2.4 and rate < 3.2:
                 cv2.drawContours(frame,[box],0,(0,255,0),2)     # Draw a box on the frame.
 
+                # Angle compensation
                 if wc > hc and Horizontal == False:
                     angleGUI -= 90
                 if Horizontal == True:
@@ -158,14 +167,17 @@ def IdentifyICchip(frame: cv2.typing.MatLike,
                     if wc < hc:
                         angleGUI -= 90
 
+                # Align ROI Horizontally
                 roi, _ = RotateImage(roi, angleROI)
                 M2 = cv2.getRotationMatrix2D((frame.shape[1]//2, frame.shape[0]//2), angleGUI, 1.0)  
 
+                # Calculate Rotated Box Coordinate for Future Use
                 box = np.array(box, dtype=np.float32).reshape(-1, 1, 2)
                 box = cv2.transform(box, M2).reshape(-1, 2)
-            
+
+                # Extracting OCR Input Images
                 roiOriginal = roi.copy()
-                roiBright = cv2.convertScaleAbs(roiOriginal, alpha=1, beta=40)  
+                roiBright = cv2.convertScaleAbs(roiOriginal, alpha=1, beta=beta)  
                 roiOriLaplacian = cv2.filter2D(roiOriginal, -1, kernel)
                 roiBriLaplacian = cv2.filter2D(roiBright, -1, kernel)
 
@@ -177,24 +189,27 @@ def IdentifyICchip(frame: cv2.typing.MatLike,
                 result3 = ocr.predict(roiOriLaplacian)
                 result4 = ocr.predict(roiBriLaplacian)
 
+                # Sum-up all the Detected Text
                 allTexts=[]
                 for item in result1+result2+result3+result4:
                     texts = item.get('rec_texts', [])  # Return empty list without 'rec_texts'
                     allTexts.extend(texts)
 
-                # List to store bestvmatch candidates
+                # List to Store Bestmatch Candidates
                 bestTrueCandidates = []
 
+                # Evaluate Detected Text
                 for text in allTexts:
                     matches = [(true, ratio(Clean(text.upper()), Clean(true))) for true in IC_INFO]
                     best_match = max(matches, key=lambda x: x[1])  
                     bestTrueCandidates.append(best_match)
 
-                # Find one of the highest scores for each true item
+                # Find Highest Score from bestTrueCandidates
                 if bestTrueCandidates:
 
                     final_best = max(bestTrueCandidates, key=lambda x: x[1]) 
                    
+                    # Threshold of Accuracy for Better Confidential Result
                     if final_best[1] > 0.55:
                         chipList[idx] = final_best
                         flagCount=1
@@ -237,43 +252,57 @@ def ModeChanger(commandKey: str,
         while (True):
             Key_2 = cv2.waitKey(30)
 
+            # Save Function
             if Key_2 == ord('s') or Key_2 == ord('S'):
                 filename = input("FileName:")
                 cv2.imwrite(filename+".png",frame)
                 print(f"Saved: {filename}.png")
+
+            # Resume Function
             elif Key_2 == ord('r') or Key_2 == ord('R'):
                 print("Resume!")
                 break
+
+            # Exit
             elif Key_2 == 27:
                 print("ByeBye!!")
                 cap.release() 
                 exit()
 
-    # Mode: 1, 2, 3, 4, 5
+    # Mode 1: Default Mode
     elif commandKey == ord('1'):
         print("Current Mode: Mode 1")
         modeFlag[0] = False
         modeFlag[1] = False
+
+    # Mode 2: Node Identification
     elif commandKey == ord('2'):
         if not modeFlag[0]:
             print("Mode-On: Mode 2")
         else:
             print("Release Mode 2")
         modeFlag[0] = not modeFlag[0]
+
+    # Mode 3: Internal Circuit Display
     elif commandKey == ord('3'):
         if not modeFlag[1]:
             print("Mode-On: Mode 3")
         else:
             print("Release Mode 3")        
         modeFlag[1] = not modeFlag[1]
+
+    # Mode 4: Data-Sheet
     elif commandKey == ord('4'):
         print("Corresponding data-sheet will be poped up!")
         modeFlag[2] = True
+    
+    # Mode 5: Debug Mode
     elif commandKey == ord('5'):
         if not modeFlag[3]:
             print("Debug Mode!!")
         else:
             print("Release Debug Mode")
+            # Destroy ROI Windows
             cv2.destroyWindow("ROI Original")
             cv2.destroyWindow("ROI Bright")
             cv2.destroyWindow("ROI Ori Lap")
@@ -301,16 +330,22 @@ def PinMapDraw(pinMaps: list,
                y: float,
                w: float,
                h: float):
+    
+    # Calculate Distance between Nodes
     offset = h / (((int)(len(pinMaps)/2))+1)
     for j in range((int)(len(pinMaps)/2)):
-        (text_width, text_height), baseline = cv2.getTextSize(pinMaps[j], cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+        
+        # Assign Text Printing Coordinates
+        (text_width, _), _ = cv2.getTextSize(pinMaps[j], cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
         margin = 10                             # Empty space margun between text and roi
         text_x = x - text_width - margin
         text_x2 = x + w + margin
         text_y = int(y + offset * (j + 1))
+
         if text_x < 0:                          # Prevent if text_x points locate out of frame
             text_x = 0
-        # Display texts side and side.
+
+        # Display Nodes by each Side
         cv2.putText(frame, pinMaps[j], (int(text_x), int(text_y)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         cv2.putText(frame, pinMaps[j+(int)(len(pinMaps)/2)], (int(text_x2), int(y + offset * (j + 1))), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
@@ -333,65 +368,78 @@ def GUIPrint (frame: cv2.typing.MatLike,
               boxPoint: list, 
               ang: list, 
               modeFlag: list):
+    
     idx = 0
     for i in range(len(rectPoint)):
+        # Make Empty Frame for Node and Internal Circuit Display
         EmptyFrame = np.zeros(frame.shape, np.uint8)
+
         if rectRatio[i] > 2.4 and rectRatio[i] < 3.2 and chipList[idx][0] != '':
+            # Data Unpackaging
             chip = chipList[idx][0]
             idx += 1
             chipText = (chip, IC_INFO[chip]["label"])
             x, y, w, h = rectPoint[i][0], rectPoint[i][1], rectWH[i][0], rectWH[i][1]
             wc, hc = whMinRect[i][0], whMinRect[i][1]
-            M = cv2.getRotationMatrix2D((frame.shape[1]//2, frame.shape[0]//2), ang[i], 1.0)
             pinMap = IC_INFO[chip]["pinmap"]
             BoxTemp = boxPoint[i]
+
+            # Make Rotation Matrix for Node and Internal Circuit Display
+            M = cv2.getRotationMatrix2D((frame.shape[1]//2, frame.shape[0]//2), ang[i], 1.0)
     
             smallest_two = sorted(BoxTemp, key=lambda p: p[0])[:2]  # Only two small x-point box coordinates were received. 
             smallest = sorted(smallest_two, key=lambda p:p[1])[:1]  # Then, only one of the smallest box coordinates in y-point is received.
 
+            # Conpensate for PinMapDraw
             if (wc > hc):
                 wc, hc = hc, wc
 
             # Mode 2 / 3 / 4 
             if modeFlag[0] or modeFlag[1] or modeFlag[2]:
-                if modeFlag[0]:     # Mode 2 - Node pin mapping.
+                
+                # Mode 2 - Node pin mapping.
+                if modeFlag[0]:     
                     PinMapDraw(pinMap, EmptyFrame, smallest[0][0], smallest[0][1], wc, hc)
-
-                if modeFlag[1]:     # Mode 3 - Display circuit diagram image.
+                
+                # Mode 3 - Display circuit diagram image.
+                if modeFlag[1]:     
                     ChipMap = cv2.imread("img/"+chip+".png")     # Use relative path
                     resized_ChipMap = cv2.resize(ChipMap,(int(wc),int(hc)))
 
+                    # Make an Exception for when Size of resized_ChipMap does not fit
                     x = int(smallest[0][0]); y = int(smallest[0][1])
                     h_frame, w_frame = EmptyFrame.shape[:2]
                     if y + int(hc) <= h_frame and x + int(wc) <= w_frame:
                         EmptyFrame[y:y+int(hc), x:x+int(wc)] = resized_ChipMap
                 
-                if modeFlag[2]:     # Mode 4 - Open PDF datasheet.
+                # Mode 4 - Open PDF datasheet.
+                if modeFlag[2]:     
                     pdf_path = os.path.join("pdf", chip+".pdf")  # Use relative path
                     if os.path.exists(pdf_path):
                         os.startfile(pdf_path)
                     else:
                         print("PDF 파일이 존재하지 않습니다:", pdf_path)
 
-                # The form of outputting the IC chip name when mode 2, 3, 4.
+                # Print IC Name for Mode 2, 3, 4.
                 for k in range(len(chipText)):
                     size, _ = cv2.getTextSize(chipText[k], cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
                     dx = size[0]/2
                     dy = size[1]/2 + (size[1] + size[1]/3) * (len(chipText) - k)
                     cv2.putText(EmptyFrame,chipText[k],((int)(smallest[0][0] + wc/2 - dx),(int)(smallest[0][1]-dy)),cv2.FONT_HERSHEY_SIMPLEX,0.6, (36, 255, 12), 2)
                 
-                # Turn it back to its original shape.
+                # Rotate the Frame Back to its Original Position.
                 M_inv = cv2.invertAffineTransform(M)
                 EmptyFrame = cv2.warpAffine(EmptyFrame, M_inv, (frame.shape[1], frame.shape[0]))
-                # Masked and printed out shaped letters and images in the original image.
+                # Mask and Print out Shaped Letters and Images in the Original Image.
                 mask = cv2.cvtColor(EmptyFrame, cv2.COLOR_BGR2GRAY)
                 _, mask = cv2.threshold(mask, 1, 255, cv2.THRESH_BINARY)
                 cv2.copyTo(EmptyFrame, mask, frame)
             else:
-            # Default Mode 1
-                for k in range(len(chipText)):  # The form of outputting the IC chip name when it is the default mode 1.
+                # Print IC Name for Mode 1.
+                for k in range(len(chipText)):  
                     size, _ = cv2.getTextSize(chipText[k], cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
                     dx = size[0]/2
                     dy = size[1]/2 + (size[1] + size[1]/3) * (len(chipText) - k)
                     cv2.putText(frame,chipText[k],((int)(x + w/2 - dx),(int)(y - dy)),cv2.FONT_HERSHEY_SIMPLEX,0.6, (36, 255, 12), 2)
+    
     modeFlag[2] = False
