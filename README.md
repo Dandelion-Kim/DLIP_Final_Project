@@ -25,6 +25,6 @@ Program Language: Python
 
 Program Library: Opencv, easyocr, paddleocr, 
 
-IDE/Compiler : Visual Studio 2022
+IDE/Compiler : Visual Studio Code
 
 OS: Win11
