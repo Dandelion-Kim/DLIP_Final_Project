@@ -7,6 +7,7 @@
 # @brief	[DLIP] Final Project: Camera-Based System for Automatic Recognition
 #           and Node Pin Mapping
 ###############################################################################
+
 import cv2 
 # Insert appropriate module you downloaded
 import ModuleYouDownloaded as OCRModule
@@ -14,8 +15,8 @@ import ModuleYouDownloaded as OCRModule
 # Variable Initiation
 lastValidClass = [("", 0.0) for _ in range(10)]
 
-# ========================================== Change Eval_Flag to Evauluate Project Accuracy ==========================================
-evalFlag = True
+# ========================================== Change Eval_Flag as True to Evauluate Project Accuracy ==========================================
+evalFlag = False
 evalNum = 50
 count = 1
 totalCount = -5
@@ -26,6 +27,7 @@ ICName = list(OCRModule.IC_INFO.keys())
 ICLength = len(OCRModule.IC_INFO)
 number = [0 for _ in range(ICLength)]
 
+# Connect Smartphone as Webcam
 cap = cv2.VideoCapture(1) 
 
 if not cap.isOpened(): 
@@ -66,6 +68,7 @@ while True:
     if count > evalNum:
         break
 
+# Evaluation Result Print
 if evalFlag:
     for ch in ICName:
         print(f"|{ch}|\t", end='')
