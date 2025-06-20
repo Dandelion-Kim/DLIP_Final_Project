@@ -1,3 +1,12 @@
+#################################################################################
+# @course 	Deep Learning and Image Processing - HGU
+# @author	ChanJung Kim / 22000188
+#           JongHyeon Kim / 21900179
+# @Created	2025-06-20 by JHKIM
+# @Modified	2025-06-21 by CJKIM
+# @brief	[DLIP] Final Project Module which contains paddleOCR related function
+#################################################################################
+
 import cv2 
 import numpy as np
 from Levenshtein import ratio
