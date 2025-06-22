@@ -404,13 +404,16 @@ def GUIPrint (frame: cv2.typing.MatLike,
                 # Mode 3 - Display circuit diagram image.
                 if modeFlag[1]:     
                     ChipMap = cv2.imread("img/"+chip+".png")     # Use relative path
-                    resized_ChipMap = cv2.resize(ChipMap,(int(wc),int(hc)))
+                    if ChipMap is not None:
+                        resized_ChipMap = cv2.resize(ChipMap,(int(wc),int(hc)))
 
-                    # Make an Exception for when Size of resized_ChipMap does not fit
-                    x = int(smallest[0][0]); y = int(smallest[0][1])
-                    h_frame, w_frame = EmptyFrame.shape[:2]
-                    if y + int(hc) <= h_frame and x + int(wc) <= w_frame:
-                        EmptyFrame[y:y+int(hc), x:x+int(wc)] = resized_ChipMap
+                        # Make an Exception for when Size of resized_ChipMap does not fit
+                        x = int(smallest[0][0]); y = int(smallest[0][1])
+                        h_frame, w_frame = EmptyFrame.shape[:2]
+                        if y + int(hc) <= h_frame and x + int(wc) <= w_frame:
+                            EmptyFrame[y:y+int(hc), x:x+int(wc)] = resized_ChipMap
+                    else:
+                        print(f"Circuit Image Not Found 404")
                 
                 # Mode 4 - Open PDF datasheet.
                 if modeFlag[2]:     
@@ -418,7 +421,7 @@ def GUIPrint (frame: cv2.typing.MatLike,
                     if os.path.exists(pdf_path):
                         os.startfile(pdf_path)
                     else:
-                        print("PDF 파일이 존재하지 않습니다:", pdf_path)
+                        print(f"PDF file Not Found 404 {pdf_path}")
 
                 # Print IC Name for Mode 2, 3, 4.
                 for k in range(len(chipText)):
