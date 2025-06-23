@@ -37,7 +37,7 @@
 
 #### Project Overview
 
-<img src="img\DLIP-flow_chart.drawio.png" alt="DLIP-flow_chart.drawio" style="zoom: 67%;" />
+<img src="Report\img\DLIP-flow_chart.drawio.png" alt="DLIP-flow_chart.drawio" style="zoom: 67%;" />
 
 
 
